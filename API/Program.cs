@@ -1,6 +1,9 @@
+using API.Errors;
+using API.Helpers;
+using API.Middelware;
 using Core.Interfaces;
 using Infrastructure.Data;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,19 +20,38 @@ builder.Services.AddDbContext<StoreContext>(opt =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped(typeof(IGenericRepository<>),typeof(GenericRepository<>));
+builder.Services.AddAutoMapper(typeof(MappingProfiles));
+
+builder.Services.Configure<ApiBehaviorOptions>(option =>
+{
+    option.InvalidModelStateResponseFactory = actionContext =>
+    {
+        var errors = actionContext.ModelState
+                    .Where(e => e.Value.Errors.Count > 0)
+                    .SelectMany(e => e.Value.Errors)
+                    .Select(e => e.ErrorMessage);
+        var errorRespone = new ApiValidationErrorResponse
+        {
+            Errors = errors
+        };
+        return new BadRequestObjectResult(errorRespone);
+    };
+});
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionMiddleware>();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.UseStatusCodePagesWithReExecute("/errors/{0}");
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
-
+app.UseStaticFiles();
 app.MapControllers();
  
 try
