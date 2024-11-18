@@ -21,6 +21,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped(typeof(IGenericRepository<>),typeof(GenericRepository<>));
+builder.Services.AddCors();
 builder.Services.AddAutoMapper(typeof(MappingProfiles));
 
 builder.Services.Configure<ApiBehaviorOptions>(option =>
@@ -41,6 +42,8 @@ builder.Services.Configure<ApiBehaviorOptions>(option =>
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseCors(x => x.AllowAnyHeader().AllowAnyMethod().AllowCredentials()
+    .WithOrigins("https://localhost:7055", "http://localhost:5022"));
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
